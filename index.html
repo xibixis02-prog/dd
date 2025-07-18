@@ -1,1 +1,42 @@
-
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Mario Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <div class="header">
+            <h1>Super Mario Game</h1>
+            <div class="score-board">
+                <span>Score: <span id="score">0</span></span>
+                <span>Lives: <span id="lives">3</span></span>
+                <span>Coins: <span id="coins">0</span></span>
+            </div>
+        </div>
+        
+        <canvas id="gameCanvas" width="800" height="400"></canvas>
+        
+        <div class="controls">
+            <div class="instructions">
+                <p><strong>Controles:</strong></p>
+                <p>← → Mover | ↑ Pular | Espaço Correr</p>
+            </div>
+            <button id="startBtn">Iniciar Jogo</button>
+            <button id="pauseBtn">Pausar</button>
+            <button id="restartBtn">Reiniciar</button>
+        </div>
+        
+        <div class="mobile-controls">
+            <button id="leftBtn">←</button>
+            <button id="rightBtn">→</button>
+            <button id="jumpBtn">↑</button>
+            <button id="runBtn">RUN</button>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
