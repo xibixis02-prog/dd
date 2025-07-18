@@ -97,9 +97,28 @@ class Enemy {
         // Platform collision
         this.checkPlatformCollision();
 
-        // Reverse direction at edges
-        if (this.vx > 0 && this.x > 1200) this.vx = -this.vx;
-        if (this.vx < 0 && this.x < 0) this.vx = -this.vx;
+        // Reverse direction at platform edges (more intelligent)
+        let onPlatform = false;
+        for (let platform of platforms) {
+            if (this.y + this.height >= platform.y && 
+                this.y + this.height <= platform.y + platform.height + 5 &&
+                this.x + this.width > platform.x && 
+                this.x < platform.x + platform.width) {
+                onPlatform = true;
+                
+                // Check if enemy is near edge of platform
+                if ((this.vx > 0 && this.x + this.width >= platform.x + platform.width - 5) ||
+                    (this.vx < 0 && this.x <= platform.x + 5)) {
+                    this.vx = -this.vx;
+                }
+                break;
+            }
+        }
+        
+        // If not on platform and falling, reverse direction
+        if (!onPlatform && this.vy > 2) {
+            this.vx = -this.vx;
+        }
     }
 
     checkPlatformCollision() {
@@ -227,30 +246,40 @@ function initializeGame() {
     collectibles = [];
     particles = [];
 
-    // Create platforms
-    platforms.push(new Platform(0, 350, 800, 50, 'ground')); // Ground
+    // Create platforms - extended world
+    platforms.push(new Platform(-200, 350, 2000, 50, 'ground')); // Extended ground
     platforms.push(new Platform(200, 280, 100, 20, 'brick'));
     platforms.push(new Platform(350, 220, 100, 20, 'brick'));
     platforms.push(new Platform(500, 160, 100, 20, 'brick'));
     platforms.push(new Platform(700, 250, 150, 20, 'brick'));
     platforms.push(new Platform(900, 200, 100, 20, 'brick'));
     platforms.push(new Platform(1100, 300, 200, 20, 'brick'));
+    platforms.push(new Platform(1400, 250, 100, 20, 'brick'));
+    platforms.push(new Platform(1600, 180, 100, 20, 'brick'));
+    platforms.push(new Platform(1850, 220, 150, 20, 'brick'));
 
-    // Create enemies
+    // Create enemies - more spread out
     enemies.push(new Enemy(300, 300, 'goomba'));
     enemies.push(new Enemy(450, 180, 'goomba'));
     enemies.push(new Enemy(750, 210, 'goomba'));
     enemies.push(new Enemy(950, 160, 'goomba'));
     enemies.push(new Enemy(1150, 260, 'goomba'));
+    enemies.push(new Enemy(1450, 210, 'goomba'));
+    enemies.push(new Enemy(1650, 140, 'goomba'));
+    enemies.push(new Enemy(1900, 180, 'goomba'));
 
-    // Create collectibles
+    // Create collectibles - extended
     collectibles.push(new Collectible(220, 250, 'coin'));
     collectibles.push(new Collectible(370, 190, 'coin'));
     collectibles.push(new Collectible(520, 130, 'coin'));
     collectibles.push(new Collectible(720, 220, 'coin'));
     collectibles.push(new Collectible(920, 170, 'coin'));
     collectibles.push(new Collectible(1120, 270, 'coin'));
+    collectibles.push(new Collectible(1420, 220, 'coin'));
+    collectibles.push(new Collectible(1620, 150, 'coin'));
+    collectibles.push(new Collectible(1870, 190, 'coin'));
     collectibles.push(new Collectible(400, 190, 'powerup'));
+    collectibles.push(new Collectible(1500, 220, 'powerup'));
 
     updateUI();
 }
@@ -301,8 +330,8 @@ function updatePlayer() {
         }
     }
 
-    // Keep player in bounds
-    if (player.x < 0) player.x = 0;
+    // Allow player to go left beyond initial bounds, but not too far
+    if (player.x < -200) player.x = -200;
     if (player.y > canvas.height) {
         loseLife();
     }
@@ -396,13 +425,13 @@ function checkPlayerCollectibleCollision() {
 }
 
 function updateCamera() {
-    // Follow player
+    // Follow player smoothly
     const targetX = player.x - canvas.width / 2;
     camera.x += (targetX - camera.x) * 0.1;
     
-    // Keep camera in bounds
-    if (camera.x < 0) camera.x = 0;
-    if (camera.x > 1200 - canvas.width) camera.x = 1200 - canvas.width;
+    // Allow camera to go left a bit, and extend world to the right
+    if (camera.x < -100) camera.x = -100;
+    // Remove right boundary - infinite world
 }
 
 function createParticles(x, y, color, count) {
@@ -423,12 +452,13 @@ function loseLife() {
     if (lives <= 0) {
         gameOver();
     } else {
-        // Reset player position
-        player.x = 100;
+        // Reset player position but keep some progress
+        const respawnX = Math.max(50, player.x - 100);
+        player.x = respawnX;
         player.y = 200;
         player.vx = 0;
         player.vy = 0;
-        camera.x = 0;
+        camera.x = Math.max(-100, respawnX - canvas.width / 2);
     }
     
     updateUI();
@@ -443,6 +473,93 @@ function updateUI() {
     document.getElementById('score').textContent = score;
     document.getElementById('lives').textContent = lives;
     document.getElementById('coins').textContent = coins;
+}
+
+function showStartMessage() {
+    // Clear canvas and show countdown
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawBackground();
+    
+    // Draw all game objects in static state
+    for (let platform of platforms) {
+        platform.draw();
+    }
+    
+    for (let enemy of enemies) {
+        enemy.draw();
+    }
+    
+    for (let collectible of collectibles) {
+        collectible.draw();
+    }
+    
+    drawPlayer();
+    
+    // Draw start message overlay
+    ctx.save();
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.fillStyle = '#FFD700';
+    ctx.font = 'bold 32px Arial';
+    ctx.textAlign = 'center';
+    ctx.strokeStyle = '#8B4513';
+    ctx.lineWidth = 3;
+    
+    const messages = [
+        'Pronto para começar?',
+        'Use as setas para mover',
+        'Espaço para correr',
+        'Colete moedas e derrote inimigos!'
+    ];
+    
+    messages.forEach((message, index) => {
+        const y = canvas.height / 2 - 40 + (index * 40);
+        ctx.strokeText(message, canvas.width / 2, y);
+        ctx.fillText(message, canvas.width / 2, y);
+    });
+    
+    // Countdown
+    let countdown = 3;
+    const countdownInterval = setInterval(() => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawBackground();
+        
+        for (let platform of platforms) {
+            platform.draw();
+        }
+        
+        for (let enemy of enemies) {
+            enemy.draw();
+        }
+        
+        for (let collectible of collectibles) {
+            collectible.draw();
+        }
+        
+        drawPlayer();
+        
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.fillStyle = countdown <= 1 ? '#00FF00' : '#FFD700';
+        ctx.font = 'bold 72px Arial';
+        ctx.textAlign = 'center';
+        ctx.strokeStyle = '#8B4513';
+        ctx.lineWidth = 4;
+        
+        const countdownText = countdown > 0 ? countdown.toString() : 'VAI!';
+        ctx.strokeText(countdownText, canvas.width / 2, canvas.height / 2);
+        ctx.fillText(countdownText, canvas.width / 2, canvas.height / 2);
+        
+        countdown--;
+        
+        if (countdown < -1) {
+            clearInterval(countdownInterval);
+        }
+    }, 1000);
+    
+    ctx.restore();
 }
 
 // Drawing functions
@@ -577,7 +694,12 @@ document.getElementById('startBtn').addEventListener('click', () => {
         gameRunning = true;
         gamePaused = false;
         initializeGame();
-        gameLoop();
+        
+        // Mostrar instruções por 3 segundos antes de começar
+        showStartMessage();
+        setTimeout(() => {
+            gameLoop();
+        }, 3000);
     }
 });
 
@@ -594,7 +716,10 @@ document.getElementById('restartBtn').addEventListener('click', () => {
     setTimeout(() => {
         gameRunning = true;
         initializeGame();
-        gameLoop();
+        showStartMessage();
+        setTimeout(() => {
+            gameLoop();
+        }, 3000);
     }, 100);
 });
 
@@ -644,8 +769,25 @@ document.addEventListener('touchmove', (e) => {
     e.preventDefault();
 }, { passive: false });
 
+// Adjust canvas size for better responsiveness
+function adjustCanvasSize() {
+    const container = document.querySelector('.game-container');
+    const containerWidth = container.clientWidth - 40; // Account for padding
+    
+    if (containerWidth < 800) {
+        canvas.style.width = containerWidth + 'px';
+        canvas.style.height = (containerWidth * 0.5) + 'px';
+    } else {
+        canvas.style.width = '800px';
+        canvas.style.height = '400px';
+    }
+}
+
 // Initialize the game when page loads
 window.addEventListener('load', () => {
+    adjustCanvasSize();
     initializeGame();
     updateUI();
 });
+
+window.addEventListener('resize', adjustCanvasSize);
